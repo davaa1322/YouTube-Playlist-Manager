@@ -48,7 +48,7 @@ document.addEventListener("DOMContentLoaded", function () {
       if (currentUrl.includes("youtube.com/watch")) {
         addUrlToList(currentUrl, currentTitle);
       } else {
-        alert("現在のページはYouTube動画ページではありません。");
+        alert("This Page is not Youtube.");
       }
     });
   });
@@ -64,7 +64,7 @@ document.addEventListener("DOMContentLoaded", function () {
       addUrlToList(url, title);
       urlInput.value = "";
     } else {
-      alert("有効なYouTube動画URLを入力してください。");
+      alert("Please enter a valid YouTube video URL.");
     }
   });
 
@@ -80,7 +80,7 @@ document.addEventListener("DOMContentLoaded", function () {
         // 現在再生中のインデックスを保存
         chrome.storage.local.set({ currentPlayIndex: 0 });
       } else {
-        alert("再生するURLがありません。");
+        alert("There are no URLs to play.");
       }
     });
   });
@@ -99,7 +99,7 @@ document.addEventListener("DOMContentLoaded", function () {
           loadUrls();
         });
       } else {
-        alert("このURLは既にリストに存在します。");
+        alert("This URL already exists in the list.");
       }
     });
   }
@@ -111,7 +111,7 @@ document.addEventListener("DOMContentLoaded", function () {
       urlList.innerHTML = "";
 
       if (urls.length === 0) {
-        urlList.innerHTML = "<p>保存されたURLはありません。</p>";
+        urlList.innerHTML = "<p>There are no saved URLs.</p>";
         return;
       }
 
@@ -124,15 +124,15 @@ document.addEventListener("DOMContentLoaded", function () {
         urlTitle.textContent = item.title;
         urlTitle.title = item.url;
 
-        const playButton = document.createElement("button");
-        playButton.textContent = "再生";
+        const playButton = document.createElement("play-button");
+        playButton.textContent = "Play";
         playButton.addEventListener("click", function () {
           chrome.tabs.create({ url: item.url });
           chrome.storage.local.set({ currentPlayIndex: index });
         });
 
         const removeButton = document.createElement("button");
-        removeButton.textContent = "削除";
+        removeButton.textContent = "Delete";
         removeButton.addEventListener("click", function () {
           urls.splice(index, 1);
           chrome.storage.local.set({ youtubeUrls: urls }, function () {
