@@ -9,6 +9,7 @@ document.addEventListener("DOMContentLoaded", function () {
   const speedValue = document.getElementById("speed-value");
   const volume = document.getElementById("volume");
   const volumeValue = document.getElementById("volume-value");
+  const togglePlayedUrlsButton = document.getElementById("toggle-played-urls");
 
   // 再生設定の初期化
   chrome.storage.local.get(["playbackSpeed", "volume"], function (data) {
@@ -85,7 +86,7 @@ document.addEventListener("DOMContentLoaded", function () {
         chrome.storage.local.set({ currentPlayIndex: 0 });
 
         // 再生したURLを保存
-        addPlayedUrl(urls[0].url);
+        addPlayedUrl(urls[0].url, urls[0].title);
 
         // 再生リストから削除
         urls.shift();
@@ -96,6 +97,15 @@ document.addEventListener("DOMContentLoaded", function () {
         alert("There are no URLs to play.");
       }
     });
+  });
+
+  // 再生されたリストの表示・非表示を切り替える
+  togglePlayedUrlsButton.addEventListener("click", function () {
+    if (playedUrlList.style.display === "none") {
+      playedUrlList.style.display = "block";
+    } else {
+      playedUrlList.style.display = "none";
+    }
   });
 
   // URLをリストに追加する関数
@@ -144,7 +154,7 @@ document.addEventListener("DOMContentLoaded", function () {
           chrome.storage.local.set({ currentPlayIndex: index });
 
           // 再生したURLを保存
-          addPlayedUrl(item.url);
+          addPlayedUrl(item.url, item.title);
 
           // 再生リストから削除
           urls.splice(index, 1);
@@ -181,25 +191,31 @@ document.addEventListener("DOMContentLoaded", function () {
         return;
       }
 
-      playedUrls.forEach((url) => {
+      playedUrls.forEach((item) => {
         const urlItem = document.createElement("div");
         urlItem.className = "url-item";
-        urlItem.textContent = url;
+
+        const urlLink = document.createElement("a");
+        urlLink.href = item.url;
+        urlLink.textContent = item.title;
+        urlLink.target = "_blank";
+
+        urlItem.appendChild(urlLink);
         playedUrlList.appendChild(urlItem);
       });
     });
   }
 
   // 再生したURLを保存する関数
-  function addPlayedUrl(url) {
+  function addPlayedUrl(url, title) {
     chrome.storage.local.get("playedUrls", function (data) {
       let playedUrls = data.playedUrls || [];
 
       // 重複チェック
-      const isDuplicate = playedUrls.some((item) => item === url);
+      const isDuplicate = playedUrls.some((item) => item.url === url);
 
       if (!isDuplicate) {
-        playedUrls.push(url);
+        playedUrls.push({ url, title });
 
         // 100件を超えた場合、古いものから削除
         if (playedUrls.length > 100) {

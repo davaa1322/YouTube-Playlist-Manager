@@ -3,6 +3,11 @@
   <head>
     <title>YouTube Playlist Manager</title>
     <link rel="stylesheet" href="css/style.css" />
+    <style>
+      #played-url-list {
+        display: none;
+      }
+    </style>
   </head>
   <body>
     <h2>YouTube Playlist Manager</h2>
@@ -22,7 +27,7 @@
         <span class="setting-value" id="speed-value">1.00x</span>
       </div>
       <div class="setting-row">
-        <span class="setting-label">Volue:</span>
+        <span class="setting-label">Volume:</span>
         <input
           type="range"
           id="volume"
@@ -46,7 +51,7 @@
     <h3>Saved URL</h3>
     <div id="url-list"></div>
 
-    <h3>Played URL</h3>
+    <h3>Played URL <button id="toggle-played-urls">Show/Hide</button></h3>
     <div id="played-url-list"></div>
 
     <script src="js/popup.js"></script>
