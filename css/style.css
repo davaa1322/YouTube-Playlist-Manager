@@ -41,6 +41,12 @@ body {
   #play-button:hover {
     background-color: #388e3c;
   }
+  #add-url{
+    background-color: #2196f3;
+  }
+  #add-url:hover {
+    background-color: #1976d2;
+  }
   #add-current {
     background-color: #2196f3;
   }

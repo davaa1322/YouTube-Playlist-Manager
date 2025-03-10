@@ -170,42 +170,61 @@ function applyPlaybackSettings() {
     return;
   }
 
-  chrome.storage.local.get(["playbackSpeed", "volume"], function (data) {
-    console.log("Settings to apply:", data);
+  chrome.storage.local.get(
+    ["playbackSpeed", "volume", "youtubeUrls"],
+    function (data) {
+      console.log("Settings to apply:", data);
 
-    // 再生速度の設定
-    if (data.playbackSpeed) {
-      try {
-        const speed = parseFloat(data.playbackSpeed);
-        videoElement.playbackRate = speed;
-        console.log("Playback speed is set:", speed);
+      // 現在のURLが再生リストにあるかどうかを確認
+      const currentUrl = window.location.href;
+      const isInPlaylist =
+        data.youtubeUrls &&
+        data.youtubeUrls.some((item) => currentUrl.includes(item.url));
 
-        // 設定が適用されたか確認
-        setTimeout(() => {
-          console.log("Current playback speed:", videoElement.playbackRate);
-          if (Math.abs(videoElement.playbackRate - speed) > 0.01) {
-            console.warn("Playback speed setting may not be applied.");
-            trySetPlaybackRateWithYoutubeAPI(speed);
-          }
-        }, 1000);
-      } catch (e) {
-        console.error("An error occurred while setting the playback speed:", e);
+      if (!isInPlaylist) {
+        console.log(
+          "Current URL is not in the playlist. Skipping playback settings."
+        );
+        return;
       }
-    }
 
-    // 音量の設定
-    if (data.volume !== undefined) {
-      try {
-        const vol = parseInt(data.volume) / 100;
-        videoElement.volume = vol;
-        console.log("Volume set.:", vol);
-      } catch (e) {
-        console.error("An error occurred while setting the volume:", e);
+      // 再生速度の設定
+      if (data.playbackSpeed) {
+        try {
+          const speed = parseFloat(data.playbackSpeed);
+          videoElement.playbackRate = speed;
+          console.log("Playback speed is set:", speed);
+
+          // 設定が適用されたか確認
+          setTimeout(() => {
+            console.log("Current playback speed:", videoElement.playbackRate);
+            if (Math.abs(videoElement.playbackRate - speed) > 0.01) {
+              console.warn("Playback speed setting may not be applied.");
+              trySetPlaybackRateWithYoutubeAPI(speed);
+            }
+          }, 1000);
+        } catch (e) {
+          console.error(
+            "An error occurred while setting the playback speed:",
+            e
+          );
+        }
       }
-    }
 
-    isSettingApplied = true;
-  });
+      // 音量の設定
+      if (data.volume !== undefined) {
+        try {
+          const vol = parseInt(data.volume) / 100;
+          videoElement.volume = vol;
+          console.log("Volume set.:", vol);
+        } catch (e) {
+          console.error("An error occurred while setting the volume:", e);
+        }
+      }
+
+      isSettingApplied = true;
+    }
+  );
 }
 
 // YouTube APIを使用して再生速度を設定する代替方法

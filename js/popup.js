@@ -1,5 +1,6 @@
 document.addEventListener("DOMContentLoaded", function () {
   const urlList = document.getElementById("url-list");
+  const playedUrlList = document.getElementById("played-url-list");
   const urlInput = document.getElementById("url-input");
   const addUrlButton = document.getElementById("add-url");
   const addCurrentButton = document.getElementById("add-current");
@@ -38,6 +39,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // URLリストを読み込む
   loadUrls();
+
+  // 再生したURLリストを読み込む
+  loadPlayedUrls();
 
   // 現在のURLを追加ボタンのクリックイベント
   addCurrentButton.addEventListener("click", function () {
@@ -79,6 +83,15 @@ document.addEventListener("DOMContentLoaded", function () {
 
         // 現在再生中のインデックスを保存
         chrome.storage.local.set({ currentPlayIndex: 0 });
+
+        // 再生したURLを保存
+        addPlayedUrl(urls[0].url);
+
+        // 再生リストから削除
+        urls.shift();
+        chrome.storage.local.set({ youtubeUrls: urls }, function () {
+          loadUrls();
+        });
       } else {
         alert("There are no URLs to play.");
       }
@@ -124,11 +137,20 @@ document.addEventListener("DOMContentLoaded", function () {
         urlTitle.textContent = item.title;
         urlTitle.title = item.url;
 
-        const playButton = document.createElement("play-button");
+        const playButton = document.createElement("button");
         playButton.textContent = "Play";
         playButton.addEventListener("click", function () {
           chrome.tabs.create({ url: item.url });
           chrome.storage.local.set({ currentPlayIndex: index });
+
+          // 再生したURLを保存
+          addPlayedUrl(item.url);
+
+          // 再生リストから削除
+          urls.splice(index, 1);
+          chrome.storage.local.set({ youtubeUrls: urls }, function () {
+            loadUrls();
+          });
         });
 
         const removeButton = document.createElement("button");
@@ -145,6 +167,49 @@ document.addEventListener("DOMContentLoaded", function () {
         urlItem.appendChild(removeButton);
         urlList.appendChild(urlItem);
       });
+    });
+  }
+
+  // 再生したURLリストを表示する関数
+  function loadPlayedUrls() {
+    chrome.storage.local.get("playedUrls", function (data) {
+      const playedUrls = data.playedUrls || [];
+      playedUrlList.innerHTML = "";
+
+      if (playedUrls.length === 0) {
+        playedUrlList.innerHTML = "<p>There are no played URLs.</p>";
+        return;
+      }
+
+      playedUrls.forEach((url) => {
+        const urlItem = document.createElement("div");
+        urlItem.className = "url-item";
+        urlItem.textContent = url;
+        playedUrlList.appendChild(urlItem);
+      });
+    });
+  }
+
+  // 再生したURLを保存する関数
+  function addPlayedUrl(url) {
+    chrome.storage.local.get("playedUrls", function (data) {
+      let playedUrls = data.playedUrls || [];
+
+      // 重複チェック
+      const isDuplicate = playedUrls.some((item) => item === url);
+
+      if (!isDuplicate) {
+        playedUrls.push(url);
+
+        // 100件を超えた場合、古いものから削除
+        if (playedUrls.length > 100) {
+          playedUrls.shift();
+        }
+
+        chrome.storage.local.set({ playedUrls: playedUrls }, function () {
+          loadPlayedUrls();
+        });
+      }
     });
   }
 });
