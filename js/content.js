@@ -118,14 +118,24 @@ function handleVideoEnd() {
   console.log("End of video event has been fired.");
 
   chrome.storage.local.get(
-    ["youtubeUrls", "currentPlayIndex"],
+    ["youtubeUrls", "currentPlayIndex", "playedUrls"],
     function (data) {
       console.log("Acquired data:", data);
 
       const urls = data.youtubeUrls || [];
       let currentIndex = data.currentPlayIndex;
+      let playedUrls = data.playedUrls || [];
 
       if (typeof currentIndex === "number" && urls.length > 0) {
+        // 現在の動画を再生されたリストに追加
+        const currentVideo = urls[currentIndex];
+        playedUrls.push(currentVideo);
+
+        // 100件を超えた場合、古いものから削除
+        if (playedUrls.length > 100) {
+          playedUrls.shift();
+        }
+
         // 次の動画のインデックス
         const nextIndex = currentIndex + 1;
         console.log(`Next: ${nextIndex} / All ${urls.length}`);
@@ -135,7 +145,7 @@ function handleVideoEnd() {
           setTimeout(function () {
             try {
               chrome.storage.local.set(
-                { currentPlayIndex: nextIndex },
+                { currentPlayIndex: nextIndex, playedUrls: playedUrls },
                 function () {
                   const nextUrl = urls[nextIndex].url;
                   console.log("Go to the following URL:", nextUrl);
@@ -171,7 +181,7 @@ function applyPlaybackSettings() {
   }
 
   chrome.storage.local.get(
-    ["playbackSpeed", "volume", "youtubeUrls"],
+    ["playbackSpeed", "volume", "youtubeUrls", "currentPlayIndex"],
     function (data) {
       console.log("Settings to apply:", data);
 
@@ -220,6 +230,13 @@ function applyPlaybackSettings() {
         } catch (e) {
           console.error("An error occurred while setting the volume:", e);
         }
+      }
+
+      // 現在再生中の動画の名前を太くする
+      if (typeof data.currentPlayIndex === "number") {
+        const currentIndex = data.currentPlayIndex;
+        const currentTitle = data.youtubeUrls[currentIndex].title;
+        document.title = `▶ ${currentTitle}`;
       }
 
       isSettingApplied = true;

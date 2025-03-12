@@ -10,6 +10,8 @@ document.addEventListener("DOMContentLoaded", function () {
   const volume = document.getElementById("volume");
   const volumeValue = document.getElementById("volume-value");
   const togglePlayedUrlsButton = document.getElementById("toggle-played-urls");
+  const clearPlaylistButton = document.getElementById("clear-playlist");
+  const clearPlayedUrlsButton = document.getElementById("clear-played-urls");
 
   // 再生設定の初期化
   chrome.storage.local.get(["playbackSpeed", "volume"], function (data) {
@@ -108,6 +110,20 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   });
 
+  // 再生リストをクリアするボタンのクリックイベント
+  clearPlaylistButton.addEventListener("click", function () {
+    chrome.storage.local.set({ youtubeUrls: [] }, function () {
+      loadUrls();
+    });
+  });
+
+  // 再生されたリストをクリアするボタンのクリックイベント
+  clearPlayedUrlsButton.addEventListener("click", function () {
+    chrome.storage.local.set({ playedUrls: [] }, function () {
+      loadPlayedUrls();
+    });
+  });
+
   // URLをリストに追加する関数
   function addUrlToList(url, title) {
     chrome.storage.local.get("youtubeUrls", function (data) {
@@ -148,7 +164,14 @@ document.addEventListener("DOMContentLoaded", function () {
         urlTitle.title = item.url;
 
         const playButton = document.createElement("button");
-        playButton.textContent = "Play";
+        const playIcon = document.createElement("img");
+        playIcon.src = "images/play.png";
+        playIcon.alt = "Play";
+        playIcon.title = "Play";
+        playIcon.width = 14;
+        playIcon.height = 14;
+        playButton.appendChild(playIcon);
+
         playButton.addEventListener("click", function () {
           chrome.tabs.create({ url: item.url });
           chrome.storage.local.set({ currentPlayIndex: index });
@@ -164,12 +187,43 @@ document.addEventListener("DOMContentLoaded", function () {
         });
 
         const removeButton = document.createElement("button");
-        removeButton.textContent = "Delete";
+        const removeIcon = document.createElement("img");
+        removeIcon.src = "images/delete.png";
+        removeIcon.alt = "Remove";
+        removeIcon.title = "Remove";
+        removeIcon.width = 14;
+        removeIcon.height = 14;
+        removeButton.appendChild(removeIcon);
+
         removeButton.addEventListener("click", function () {
           urls.splice(index, 1);
           chrome.storage.local.set({ youtubeUrls: urls }, function () {
             loadUrls();
           });
+        });
+
+        // ドラッグアンドドロップで順番を変更できるようにする
+        urlItem.draggable = true;
+        urlItem.addEventListener("dragstart", function (e) {
+          e.dataTransfer.setData("text/plain", index);
+        });
+
+        urlItem.addEventListener("dragover", function (e) {
+          e.preventDefault();
+        });
+
+        urlItem.addEventListener("drop", function (e) {
+          e.preventDefault();
+          const draggedIndex = e.dataTransfer.getData("text/plain");
+          const targetIndex = index;
+
+          if (draggedIndex !== targetIndex) {
+            const draggedItem = urls.splice(draggedIndex, 1)[0];
+            urls.splice(targetIndex, 0, draggedItem);
+            chrome.storage.local.set({ youtubeUrls: urls }, function () {
+              loadUrls();
+            });
+          }
         });
 
         urlItem.appendChild(urlTitle);

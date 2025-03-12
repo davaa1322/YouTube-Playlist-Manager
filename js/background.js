@@ -16,7 +16,7 @@ chrome.contextMenus.onClicked.addListener(function (info, tab) {
     chrome.storage.local.get("youtubeUrls", function (data) {
       const urls = data.youtubeUrls || [];
 
-      // 重複チェック
+      // Check duplicate
       const isDuplicate = urls.some((item) => item.url === url);
 
       if (!isDuplicate) {

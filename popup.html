@@ -41,17 +41,72 @@
     </div>
 
     <div class="controls">
-      <button id="add-current">Add Current URL</button>
-      <button id="play-button">Start Play List</button>
+      <button id="add-current">
+        <img
+          src="images/flash.png"
+          alt="Add Current URL"
+          title="Add Current URL"
+          width="14"
+          height="14"
+        />
+      </button>
+      <button id="play-button">
+        <img
+          src="images/play.png"
+          alt="Start Play List"
+          title="Start Play List"
+          width="14"
+          height="14"
+        />
+      </button>
+      <button id="clear-playlist">
+        <img
+          src="images/broom.png"
+          alt="Clear Playlist"
+          title="Clear Playlist"
+          width="14"
+          height="14"
+        />
+      </button>
     </div>
-
-    <input type="text" id="url-input" placeholder="Insert YouTube URL" />
-    <button id="add-url">Add URL</button>
-
+    <div class="url-input-container">
+      <input type="text" id="url-input" placeholder="Insert YouTube URL" />
+      <button id="add-url">
+        <img
+          src="images/add.png"
+          alt="Add URL"
+          title="Add URL"
+          width="14"
+          height="14"
+        />
+      </button>
+    </div>
     <h3>Saved URL</h3>
     <div id="url-list"></div>
 
-    <h3>Played URL <button id="toggle-played-urls">Show/Hide</button></h3>
+    <h3>
+      Played URL
+      <div class="controls">
+        <button id="toggle-played-urls">
+          <img
+            src="images/show.png"
+            alt="Show/Hide"
+            title="Show/Hide"
+            width="14"
+            height="14"
+          />
+        </button>
+        <button id="clear-played-urls">
+          <img
+            src="images/broom.png"
+            alt="Clear Played URLs"
+            title="Clear Played URLs"
+            width="14"
+            height="14"
+          />
+        </button>
+      </div>
+    </h3>
     <div id="played-url-list"></div>
 
     <script src="js/popup.js"></script>
