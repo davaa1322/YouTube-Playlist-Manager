@@ -24,60 +24,62 @@ function initializeExtension() {
   findVideoElement();
 }
 
-// ビデオ要素を見つける関数
+// Find video
 function findVideoElement() {
   console.log("Searching for videos...");
 
-  // 複数のセレクタを試して確実に見つける
-  videoElement =
-    document.querySelector("video") ||
-    document.querySelector(".html5-main-video") ||
-    document.getElementsByTagName("video")[0];
+  const observer = new MutationObserver((mutations, obs) => {
+    if (!videoElement) {
+      videoElement =
+        document.querySelector("video") ||
+        document.querySelector(".html5-main-video");
 
-  if (videoElement) {
-    console.log("Video found:", videoElement);
-    setupVideoEndListener();
-    applyPlaybackSettings();
-  } else {
-    retryCount++;
-    if (retryCount < MAX_RETRY) {
-      console.log(`Video element not found. Retry ${retryCount}/${MAX_RETRY}`);
-      setTimeout(findVideoElement, 1000);
-    } else {
-      console.error(
-        "Gives up searching for video. The maximum number of retries has been reached."
-      );
+      if (videoElement) {
+        console.log("Video found via MutationObserver:", videoElement);
+        setupVideoEndListener();
+        applyPlaybackSettings();
+        obs.disconnect(); // 見つかったら監視を停止
+      }
     }
-  }
+  });
+
+  observer.observe(document.body, {
+    childList: true,
+    subtree: true,
+  });
+
+  console.log("Started observing for video element.");
 }
 
-// YouTubeの自動再生機能を無効化する
+// Disable YouTube Autoplay Button
 function disableYoutubeAutoplay() {
   console.log("Trying to disable YouTube autoplay feature...");
 
   const checkAndDisable = () => {
     const autoplayToggle = document.querySelector(".ytp-autonav-toggle-button");
-    if (autoplayToggle) {
-      if (autoplayToggle.getAttribute("aria-checked") === "true") {
-        try {
-          autoplayToggle.click();
-          console.log("YouTube autoplay has been disabled.");
-        } catch (e) {
-          console.error("Failed to disable autoplay:", e);
-        }
-      } else {
-        console.log("YouTube autoplay is already disabled");
-      }
+    if (
+      autoplayToggle &&
+      autoplayToggle.getAttribute("aria-checked") === "true"
+    ) {
+      autoplayToggle.click();
+      console.log("YouTube autoplay has been disabled.");
     } else {
-      console.log("I can't find the autoplay button.");
+      console.log("Autoplay is already disabled or button not found.");
     }
   };
 
-  // すぐに実行してみる
   checkAndDisable();
+  setTimeout(checkAndDisable, 3000); //  Reconfirmation with delayed execution
 
-  // 少し遅延させて再度試行（DOMが完全に読み込まれるのを待つ）
-  setTimeout(checkAndDisable, 3000);
+  // Monitor button changes using MutationObserver
+  const observer = new MutationObserver(() => {
+    checkAndDisable();
+  });
+
+  const target = document.querySelector("body");
+  if (target) {
+    observer.observe(target, { childList: true, subtree: true });
+  }
 }
 
 // ビデオ終了イベントリスナーの設定
@@ -113,7 +115,7 @@ function checkVideoNearEnd() {
   }
 }
 
-// ビデオ終了時の処理
+// Processing at the end of a video
 function handleVideoEnd() {
   console.log("End of video event has been fired.");
 
@@ -127,21 +129,17 @@ function handleVideoEnd() {
       let playedUrls = data.playedUrls || [];
 
       if (typeof currentIndex === "number" && urls.length > 0) {
-        // 現在の動画を再生されたリストに追加
         const currentVideo = urls[currentIndex];
         playedUrls.push(currentVideo);
 
-        // 100件を超えた場合、古いものから削除
         if (playedUrls.length > 100) {
           playedUrls.shift();
         }
 
-        // 次の動画のインデックス
         const nextIndex = currentIndex + 1;
         console.log(`Next: ${nextIndex} / All ${urls.length}`);
 
         if (nextIndex < urls.length) {
-          // 確実に次のビデオに移動するために少し遅延させる
           setTimeout(function () {
             try {
               chrome.storage.local.set(
@@ -150,8 +148,9 @@ function handleVideoEnd() {
                   const nextUrl = urls[nextIndex].url;
                   console.log("Go to the following URL:", nextUrl);
 
-                  // YouTubeの自動再生よりも優先するため、直接location.hrefを変更
-                  window.location.href = nextUrl;
+                  // pushState change URL
+                  history.pushState({}, "", nextUrl);
+                  window.dispatchEvent(new Event("popstate"));
                 }
               );
             } catch (e) {
@@ -179,69 +178,74 @@ function applyPlaybackSettings() {
     );
     return;
   }
+  try {
+    chrome.storage.local.get(
+      ["playbackSpeed", "volume", "youtubeUrls", "currentPlayIndex"],
+      function (data) {
+        console.log("Settings to apply:", data);
 
-  chrome.storage.local.get(
-    ["playbackSpeed", "volume", "youtubeUrls", "currentPlayIndex"],
-    function (data) {
-      console.log("Settings to apply:", data);
-
-      // 現在のURLが再生リストにあるかどうかを確認
-      const currentUrl = window.location.href;
-      const isInPlaylist =
-        data.youtubeUrls &&
-        data.youtubeUrls.some((item) => currentUrl.includes(item.url));
-
-      if (!isInPlaylist) {
-        console.log(
-          "Current URL is not in the playlist. Skipping playback settings."
-        );
-        return;
-      }
-
-      // 再生速度の設定
-      if (data.playbackSpeed) {
-        try {
-          const speed = parseFloat(data.playbackSpeed);
-          videoElement.playbackRate = speed;
-          console.log("Playback speed is set:", speed);
-
-          // 設定が適用されたか確認
-          setTimeout(() => {
-            console.log("Current playback speed:", videoElement.playbackRate);
-            if (Math.abs(videoElement.playbackRate - speed) > 0.01) {
-              console.warn("Playback speed setting may not be applied.");
-              trySetPlaybackRateWithYoutubeAPI(speed);
-            }
-          }, 1000);
-        } catch (e) {
-          console.error(
-            "An error occurred while setting the playback speed:",
-            e
+        // 現在のURLが再生リストにあるかどうかを確認
+        const currentUrl = window.location.href;
+        const isInPlaylist =
+          data.youtubeUrls &&
+          data.youtubeUrls.some(
+            (item) => item.url && currentUrl.includes(item.url)
           );
+
+        if (!isInPlaylist) {
+          console.log(
+            "Current URL is not in the playlist. Skipping playback settings."
+          );
+          return;
         }
-      }
 
-      // 音量の設定
-      if (data.volume !== undefined) {
-        try {
-          const vol = parseInt(data.volume) / 100;
-          videoElement.volume = vol;
-          console.log("Volume set.:", vol);
-        } catch (e) {
-          console.error("An error occurred while setting the volume:", e);
+        // 再生速度の設定
+        if (data.playbackSpeed) {
+          try {
+            const speed = parseFloat(data.playbackSpeed);
+            videoElement.playbackRate = speed;
+            console.log("Playback speed is set:", speed);
+
+            // 設定が適用されたか確認
+            setTimeout(() => {
+              console.log("Current playback speed:", videoElement.playbackRate);
+              if (Math.abs(videoElement.playbackRate - speed) > 0.01) {
+                console.warn("Playback speed setting may not be applied.");
+                trySetPlaybackRateWithYoutubeAPI(speed);
+              }
+            }, 1000);
+          } catch (e) {
+            console.error(
+              "An error occurred while setting the playback speed:",
+              e
+            );
+          }
         }
-      }
 
-      // 現在再生中の動画の名前を太くする
-      if (typeof data.currentPlayIndex === "number") {
-        const currentIndex = data.currentPlayIndex;
-        const currentTitle = data.youtubeUrls[currentIndex].title;
-        document.title = `▶ ${currentTitle}`;
-      }
+        // 音量の設定
+        if (data.volume !== undefined) {
+          try {
+            const vol = parseInt(data.volume) / 100;
+            videoElement.volume = vol;
+            console.log("Volume set.:", vol);
+          } catch (e) {
+            console.error("An error occurred while setting the volume:", e);
+          }
+        }
 
-      isSettingApplied = true;
-    }
-  );
+        // 現在再生中の動画の名前を太くする
+        if (typeof data.currentPlayIndex === "number") {
+          const currentIndex = data.currentPlayIndex;
+          const currentTitle = data.youtubeUrls[currentIndex].title;
+          document.title = `▶ ${currentTitle}`;
+        }
+
+        isSettingApplied = true;
+      }
+    );
+  } catch (error) {
+    console.error("Storage access failed due to invalid context:", error);
+  }
 }
 
 // YouTube APIを使用して再生速度を設定する代替方法
@@ -309,17 +313,11 @@ function setupYouTubeSPAListener() {
   });
 
   // 方法2: 履歴APIの変更を監視
-  const originalPushState = history.pushState;
-  history.pushState = function () {
-    originalPushState.apply(this, arguments);
-    console.log("Detected history changes (pushState)");
-
-    if (window.location.href.includes("youtube.com/watch")) {
-      resetAndReinitialize();
-    }
+  window.onpopstate = function () {
+    console.log("Detected browser navigation (popstate)");
+    resetAndReinitialize();
   };
-
-  // 方法3: URLが変わったことを検出
+  /*
   let lastUrl = window.location.href;
   setInterval(function () {
     if (lastUrl !== window.location.href) {
@@ -331,6 +329,7 @@ function setupYouTubeSPAListener() {
       }
     }
   }, 1000);
+  */
 }
 
 // 状態をリセットして再初期化
