@@ -1,26 +1,24 @@
-// YouTubeの動画プレーヤーを制御するためのcontent.js
 console.log("YouTube Playlist Manager - Content Script Loaded");
 
-// グローバル変数
+// global variables
 let videoElement = null;
 let isSettingApplied = false;
 let retryCount = 0;
 const MAX_RETRY = 10;
-
-// 初期化関数
+// init
 function initializeExtension() {
   console.log("Starts initializing the extension.");
 
-  // 現在のURLがYouTube動画ページかどうかをチェック
+  // check if the current page is a YouTube video page
   if (!window.location.href.includes("youtube.com/watch")) {
     console.log("This is not a YouTube video page. Skip initialization.");
     return;
   }
 
-  // YouTubeの自動再生を無効化
+  // disable autoplay
   disableYoutubeAutoplay();
 
-  // ビデオ要素を取得
+  // find video element
   findVideoElement();
 }
 
@@ -38,7 +36,7 @@ function findVideoElement() {
         console.log("Video found via MutationObserver:", videoElement);
         setupVideoEndListener();
         applyPlaybackSettings();
-        obs.disconnect(); // 見つかったら監視を停止
+        obs.disconnect();
       }
     }
   });
@@ -82,7 +80,7 @@ function disableYoutubeAutoplay() {
   }
 }
 
-// ビデオ終了イベントリスナーの設定
+// Set up an event listener for the end of the video
 function setupVideoEndListener() {
   if (!videoElement) {
     console.error(
@@ -91,26 +89,22 @@ function setupVideoEndListener() {
     return;
   }
 
-  // 既存のリスナーを削除して重複を防止
   videoElement.removeEventListener("ended", handleVideoEnd);
   videoElement.addEventListener("ended", handleVideoEnd);
   console.log("End-of-video event listener set up.");
-
-  // 念のため、timeupdate イベントでも終了を検知
   videoElement.addEventListener("timeupdate", checkVideoNearEnd);
 }
 
-// ビデオが終了に近づいているかチェック
+// check if the video is near the end
 function checkVideoNearEnd() {
   if (!videoElement) return;
 
-  // ビデオの残り時間が1秒未満になったら終了とみなす
+  // Check if the video is nearing the end
   const timeRemaining = videoElement.duration - videoElement.currentTime;
   if (timeRemaining < 1 && videoElement.duration > 0) {
     videoElement.removeEventListener("timeupdate", checkVideoNearEnd);
     console.log("Video is nearing its end. Prepare for the next video.");
 
-    // 少し遅延させて次のビデオに移動（YouTubeの自動処理を回避）
     setTimeout(handleVideoEnd, 500);
   }
 }
@@ -170,7 +164,7 @@ function handleVideoEnd() {
   );
 }
 
-// 再生設定（速度、音量）を適用する
+// apply playback settings
 function applyPlaybackSettings() {
   if (!videoElement) {
     console.error(
@@ -184,7 +178,6 @@ function applyPlaybackSettings() {
       function (data) {
         console.log("Settings to apply:", data);
 
-        // 現在のURLが再生リストにあるかどうかを確認
         const currentUrl = window.location.href;
         const isInPlaylist =
           data.youtubeUrls &&
@@ -199,14 +192,14 @@ function applyPlaybackSettings() {
           return;
         }
 
-        // 再生速度の設定
+        // set playback speed
         if (data.playbackSpeed) {
           try {
             const speed = parseFloat(data.playbackSpeed);
             videoElement.playbackRate = speed;
             console.log("Playback speed is set:", speed);
 
-            // 設定が適用されたか確認
+            // check if the playback speed is applied
             setTimeout(() => {
               console.log("Current playback speed:", videoElement.playbackRate);
               if (Math.abs(videoElement.playbackRate - speed) > 0.01) {
@@ -222,7 +215,7 @@ function applyPlaybackSettings() {
           }
         }
 
-        // 音量の設定
+        // volume setting
         if (data.volume !== undefined) {
           try {
             const vol = parseInt(data.volume) / 100;
@@ -233,13 +226,6 @@ function applyPlaybackSettings() {
           }
         }
 
-        // 現在再生中の動画の名前を太くする
-        if (typeof data.currentPlayIndex === "number") {
-          const currentIndex = data.currentPlayIndex;
-          const currentTitle = data.youtubeUrls[currentIndex].title;
-          document.title = `▶ ${currentTitle}`;
-        }
-
         isSettingApplied = true;
       }
     );
@@ -248,12 +234,12 @@ function applyPlaybackSettings() {
   }
 }
 
-// YouTube APIを使用して再生速度を設定する代替方法
+// Youtube API use to set playback speed
 function trySetPlaybackRateWithYoutubeAPI(speed) {
   console.log("YouTube Trying to set playback speed with YouTube API...");
 
   try {
-    // YouTubeプレーヤーインスタンスにアクセスする方法1
+    // YouTube playback speed setting method 1
     if (window.yt && window.yt.player && window.yt.player.getPlayer) {
       const ytPlayer = window.yt.player.getPlayer();
       if (ytPlayer && ytPlayer.setPlaybackRate) {
@@ -266,7 +252,7 @@ function trySetPlaybackRateWithYoutubeAPI(speed) {
       }
     }
 
-    // YouTubeプレーヤーインスタンスにアクセスする方法2
+    // YouTube playback speed setting method 2
     const videoPlayerElement = document.getElementById("movie_player");
     if (videoPlayerElement && videoPlayerElement.setPlaybackRate) {
       videoPlayerElement.setPlaybackRate(speed);
@@ -274,7 +260,7 @@ function trySetPlaybackRateWithYoutubeAPI(speed) {
       return true;
     }
 
-    // JavaScript経由でHTML5ビデオを直接制御する方法3
+    // JavaScript HTML5 video element
     if (document.querySelector("video")) {
       const videoElem = document.querySelector("video");
       videoElem.playbackRate = speed;
@@ -288,7 +274,7 @@ function trySetPlaybackRateWithYoutubeAPI(speed) {
   return false;
 }
 
-// 設定変更を監視
+// set up a listener for changes in storage
 chrome.storage.onChanged.addListener(function (changes, namespace) {
   if (namespace === "local") {
     console.log("Detect storage changes:", changes);
@@ -297,22 +283,20 @@ chrome.storage.onChanged.addListener(function (changes, namespace) {
       console.log(
         "Playback settings have been changed. Apply the new settings."
       );
-      setTimeout(applyPlaybackSettings, 100); // 少し遅延させて適用
+      setTimeout(applyPlaybackSettings, 100);
     }
   }
 });
 
-// YouTubeのSPA（Single Page Application）ナビゲーションを検出
+// YouTube SPA navigation listener
 function setupYouTubeSPAListener() {
   console.log("Set up a SPA navigation listener for YouTube.");
 
-  // 方法1: YouTube固有のナビゲーションイベント
   document.addEventListener("yt-navigate-finish", function () {
     console.log("YouTube SPA navigation detected (yt-navigate-finish)");
     resetAndReinitialize();
   });
 
-  // 方法2: 履歴APIの変更を監視
   window.onpopstate = function () {
     console.log("Detected browser navigation (popstate)");
     resetAndReinitialize();
@@ -332,25 +316,43 @@ function setupYouTubeSPAListener() {
   */
 }
 
-// 状態をリセットして再初期化
+// Reset and reinitialize the extension
 function resetAndReinitialize() {
   console.log("Reset and reinitialize the state of the extension...");
   videoElement = null;
   isSettingApplied = false;
   retryCount = 0;
 
-  // 少し遅延させて再初期化
-  setTimeout(initializeExtension, 1000);
+  setTimeout(initializeExtension, 2000);
 }
 
-// 拡張機能の初期化
+function monitorVideoState() {
+  let videoElement = document.querySelector("video");
+
+  if (videoElement) {
+    let videoTitle = document.title.replace(" - YouTube", "");
+
+    videoElement.addEventListener("play", function () {
+      chrome.runtime.sendMessage({
+        action: "setNowPlaying",
+        videoTitle: videoTitle,
+      });
+    });
+
+    videoElement.addEventListener("ended", function () {
+      chrome.runtime.sendMessage({ action: "clearNowPlaying" });
+    });
+  }
+}
+
+// Set up the extension when the DOM is fully loaded
 document.addEventListener("DOMContentLoaded", function () {
   console.log("DOMContentLoaded Start");
   initializeExtension();
   setupYouTubeSPAListener();
 });
 
-// ページが完全に読み込まれた場合にも初期化
+// Set up the extension when the page is fully loaded
 window.addEventListener("load", function () {
   console.log("Load");
   if (!isSettingApplied) {
@@ -358,8 +360,9 @@ window.addEventListener("load", function () {
     initializeExtension();
   }
 });
+window.addEventListener("load", monitorVideoState);
 
-// 定期的にビデオ要素と設定の状態をチェック（バックアップ措置）
+// Reinitialize the extension every 10 seconds
 setInterval(function () {
   if (window.location.href.includes("youtube.com/watch")) {
     if (!videoElement || !isSettingApplied) {
@@ -369,6 +372,5 @@ setInterval(function () {
   }
 }, 10000);
 
-// 初期化を開始
 console.log("Start console.js");
 setTimeout(initializeExtension, 500);

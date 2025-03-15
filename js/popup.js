@@ -12,8 +12,9 @@ document.addEventListener("DOMContentLoaded", function () {
   const togglePlayedUrlsButton = document.getElementById("toggle-played-urls");
   const clearPlaylistButton = document.getElementById("clear-playlist");
   const clearPlayedUrlsButton = document.getElementById("clear-played-urls");
+  const currentVideoElement = document.getElementById("current-video");
 
-  // 再生設定の初期化
+  // init the playback speed and volume
   chrome.storage.local.get(["playbackSpeed", "volume"], function (data) {
     if (data.playbackSpeed) {
       playbackSpeed.value = data.playbackSpeed;
@@ -25,28 +26,36 @@ document.addEventListener("DOMContentLoaded", function () {
       volumeValue.textContent = data.volume + "%";
     }
   });
+  // Now Playing video title
+  chrome.storage.local.get("nowPlaying", function (data) {
+    if (data.nowPlaying) {
+      currentVideoElement.textContent = data.nowPlaying;
+    } else {
+      currentVideoElement.textContent = "No video playing";
+    }
+  });
 
-  // 再生速度の変更イベント
+  // play speed change event
   playbackSpeed.addEventListener("input", function () {
     const speed = parseFloat(playbackSpeed.value);
     speedValue.textContent = speed.toFixed(2) + "x";
     chrome.storage.local.set({ playbackSpeed: speed });
   });
 
-  // 音量の変更イベント
+  // volue change event
   volume.addEventListener("input", function () {
     const vol = parseInt(volume.value);
     volumeValue.textContent = vol + "%";
     chrome.storage.local.set({ volume: vol });
   });
 
-  // URLリストを読み込む
+  // load the URL list
   loadUrls();
 
-  // 再生したURLリストを読み込む
+  // load the played URL list
   loadPlayedUrls();
 
-  // 現在のURLを追加ボタンのクリックイベント
+  // add current URL button click event
   addCurrentButton.addEventListener("click", function () {
     chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
       const currentUrl = tabs[0].url;
@@ -60,12 +69,11 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   });
 
-  // URL追加ボタンのクリックイベント
+  // Add URL button click event
   addUrlButton.addEventListener("click", function () {
     const url = urlInput.value.trim();
 
     if (url && url.includes("youtube.com/watch")) {
-      // YouTubeのURLからタイトルを取得するのは困難なので、URLの一部を表示
       const videoId = new URL(url).searchParams.get("v");
       const title = `YouTube Video (${videoId})`;
       addUrlToList(url, title);
@@ -75,22 +83,22 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   });
 
-  // 再生開始ボタンのクリックイベント
+  // click the play button
   playButton.addEventListener("click", function () {
     chrome.storage.local.get("youtubeUrls", function (data) {
       const urls = data.youtubeUrls || [];
 
       if (urls.length > 0) {
-        // 最初のURLを再生
+        // play the first URL
         chrome.tabs.create({ url: urls[0].url });
 
-        // 現在再生中のインデックスを保存
+        // save the current play index
         chrome.storage.local.set({ currentPlayIndex: 0 });
 
-        // 再生したURLを保存
+        // save the played URL
         addPlayedUrl(urls[0].url, urls[0].title);
 
-        // 再生リストから削除
+        // delete from the list
         urls.shift();
         chrome.storage.local.set({ youtubeUrls: urls }, function () {
           loadUrls();
@@ -101,7 +109,7 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   });
 
-  // 再生されたリストの表示・非表示を切り替える
+  // view the played URL list
   togglePlayedUrlsButton.addEventListener("click", function () {
     if (playedUrlList.style.display === "none") {
       playedUrlList.style.display = "block";
@@ -110,26 +118,26 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   });
 
-  // 再生リストをクリアするボタンのクリックイベント
+  // clear the playlist
   clearPlaylistButton.addEventListener("click", function () {
     chrome.storage.local.set({ youtubeUrls: [] }, function () {
       loadUrls();
     });
   });
 
-  // 再生されたリストをクリアするボタンのクリックイベント
+  // clear the played URL list
   clearPlayedUrlsButton.addEventListener("click", function () {
     chrome.storage.local.set({ playedUrls: [] }, function () {
       loadPlayedUrls();
     });
   });
 
-  // URLをリストに追加する関数
+  // add URL to the list
   function addUrlToList(url, title) {
     chrome.storage.local.get("youtubeUrls", function (data) {
       const urls = data.youtubeUrls || [];
 
-      // 重複チェック
+      //check duplicate
       const isDuplicate = urls.some((item) => item.url === url);
 
       if (!isDuplicate) {
@@ -143,7 +151,7 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 
-  // 保存されたURLリストを表示する関数
+  // view saved URLs
   function loadUrls() {
     chrome.storage.local.get("youtubeUrls", function (data) {
       const urls = data.youtubeUrls || [];
@@ -176,10 +184,10 @@ document.addEventListener("DOMContentLoaded", function () {
           chrome.tabs.create({ url: item.url });
           chrome.storage.local.set({ currentPlayIndex: index });
 
-          // 再生したURLを保存
+          // save the played URL
           addPlayedUrl(item.url, item.title);
 
-          // 再生リストから削除
+          //delete from the list
           urls.splice(index, 1);
           chrome.storage.local.set({ youtubeUrls: urls }, function () {
             loadUrls();
@@ -202,7 +210,7 @@ document.addEventListener("DOMContentLoaded", function () {
           });
         });
 
-        // ドラッグアンドドロップで順番を変更できるようにする
+        // can be dragged
         urlItem.draggable = true;
         urlItem.addEventListener("dragstart", function (e) {
           e.dataTransfer.setData("text/plain", index);
@@ -234,7 +242,7 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 
-  // 再生したURLリストを表示する関数
+  // Load the played URL list
   function loadPlayedUrls() {
     chrome.storage.local.get("playedUrls", function (data) {
       const playedUrls = data.playedUrls || [];
@@ -260,18 +268,18 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 
-  // 再生したURLを保存する関数
+  // save the played URL
   function addPlayedUrl(url, title) {
     chrome.storage.local.get("playedUrls", function (data) {
       let playedUrls = data.playedUrls || [];
 
-      // 重複チェック
+      // Check duplicate
       const isDuplicate = playedUrls.some((item) => item.url === url);
 
       if (!isDuplicate) {
         playedUrls.push({ url, title });
 
-        // 100件を超えた場合、古いものから削除
+        // delete the oldest played URL if the list exceeds 100
         if (playedUrls.length > 100) {
           playedUrls.shift();
         }

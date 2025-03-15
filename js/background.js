@@ -40,3 +40,11 @@ chrome.contextMenus.onClicked.addListener(function (info, tab) {
     });
   }
 });
+
+chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
+  if (message.action === "setNowPlaying") {
+    chrome.storage.local.set({ nowPlaying: message.videoTitle });
+  } else if (message.action === "clearNowPlaying") {
+    chrome.storage.local.remove("nowPlaying");
+  }
+});
