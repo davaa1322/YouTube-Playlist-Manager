@@ -69,7 +69,20 @@ function handleVideoEnd() {
         if (playedUrls.length > 100) playedUrls.shift();
         const nextIndex = currentIndex + 1;
         if (nextIndex < urls.length) {
-          attemptNavigation(nextIndex, playedUrls, urls);
+          urls.splice(currentIndex, 1); // Remove the current URL from the playlist
+          chrome.storage.local.set(
+            { youtubeUrls: urls, playedUrls: playedUrls },
+            function () {
+              attemptNavigation(nextIndex, playedUrls, urls);
+            }
+          );
+        } else {
+          chrome.storage.local.set(
+            { youtubeUrls: urls, playedUrls: playedUrls },
+            function () {
+              checkAndPlayNextVideo();
+            }
+          );
         }
       }
     }
@@ -206,6 +219,21 @@ function monitorVideoState() {
   }
 }
 
+function checkAndPlayNextVideo() {
+  chrome.storage.local.get(
+    ["youtubeUrls", "currentPlayIndex"],
+    function (data) {
+      const urls = data.youtubeUrls || [];
+      const currentIndex = data.currentPlayIndex;
+      if (typeof currentIndex === "number" && currentIndex < urls.length) {
+        const nextUrl = urls[currentIndex].url;
+        history.pushState({}, "", nextUrl);
+        window.dispatchEvent(new Event("popstate"));
+      }
+    }
+  );
+}
+
 document.addEventListener("DOMContentLoaded", function () {
   initializeExtension();
   setupYouTubeSPAListener();
@@ -235,5 +263,24 @@ setInterval(function () {
     }
   }
 }, 10000);
+
+document.addEventListener("visibilitychange", function () {
+  if (document.visibilityState === "visible") {
+    chrome.storage.local.get(
+      ["youtubeUrls", "currentPlayIndex"],
+      function (data) {
+        const urls = data.youtubeUrls || [];
+        const currentIndex = data.currentPlayIndex;
+        if (typeof currentIndex === "number" && currentIndex < urls.length) {
+          const nextUrl = urls[currentIndex].url;
+          if (!window.location.href.includes(nextUrl)) {
+            history.pushState({}, "", nextUrl);
+            window.dispatchEvent(new Event("popstate"));
+          }
+        }
+      }
+    );
+  }
+});
 
 setTimeout(initializeExtension, 500);
