@@ -50,7 +50,7 @@ document.addEventListener("DOMContentLoaded", function () {
       const currentUrl = tabs[0].url;
       const currentTitle = tabs[0].title;
       if (currentUrl.includes("youtube.com/watch")) {
-        addUrlToList(currentUrl, currentTitle);
+        addUrlToList(currentUrl, currentTitle, "");
       } else {
         alert("This Page is not Youtube.");
       }
@@ -59,14 +59,39 @@ document.addEventListener("DOMContentLoaded", function () {
 
   function addUrl() {
     const url = urlInput.value.trim();
+
     if (url && url.includes("youtube.com/watch")) {
       const videoId = new URL(url).searchParams.get("v");
-      const title = `YouTube Video (${videoId})`;
-      addUrlToList(url, title);
+      let title = "";
+      let thumbnail_url = "";
+      getYouTubeInfo(youtubeUrl).then((info) => {
+        if (info) {
+          title = info.title;
+          thumbnail_url = info.thumbnail_url;
+        } else {
+          title = `YouTube Video (${videoId})`;
+        }
+      });
+      addUrlToList(url, title, thumbnail_url);
       urlInput.value = "";
     } else {
       alert("Please enter a valid YouTube video URL.");
     }
+  }
+
+  function getYouTubeInfo(videoUrl) {
+    const apiUrl = `https://www.youtube.com/oembed?url=${videoUrl}&format=json`;
+
+    return fetch(apiUrl)
+      .then((response) => response.json())
+      .then((data) => ({
+        title: data.title,
+        thumbnail_url: data.thumbnail_url,
+      }))
+      .catch((error) => {
+        console.error("Error fetching video info:", error);
+        return null;
+      });
   }
 
   function playNextUrl() {
@@ -120,11 +145,11 @@ document.addEventListener("DOMContentLoaded", function () {
     chrome.storage.local.set({ volume: vol });
   }
 
-  function addUrlToList(url, title) {
+  function addUrlToList(url, title, thumbnail_url) {
     chrome.storage.local.get("youtubeUrls", function (data) {
       const urls = data.youtubeUrls || [];
       if (!urls.some((item) => item.url === url)) {
-        urls.push({ url, title });
+        urls.push({ url, title, thumbnail_url });
         chrome.storage.local.set({ youtubeUrls: urls }, loadUrls);
       } else {
         alert("This URL already exists in the list.");

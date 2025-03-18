@@ -11,7 +11,8 @@ chrome.contextMenus.onClicked.addListener(function (info, tab) {
   if (info.menuItemId === "addToPlaylist") {
     const url = info.linkUrl;
     const videoId = new URL(url).searchParams.get("v");
-    const title = `YouTube Video (${videoId})`;
+    let title = `YouTube Video (${videoId})`;
+    let thumbnail_url = "";
 
     chrome.storage.local.get("youtubeUrls", function (data) {
       const urls = data.youtubeUrls || [];
@@ -20,7 +21,16 @@ chrome.contextMenus.onClicked.addListener(function (info, tab) {
       const isDuplicate = urls.some((item) => item.url === url);
 
       if (!isDuplicate) {
-        urls.push({ url, title });
+        getYouTubeInfo(url).then((info) => {
+          if (info) {
+            title = info.title;
+            thumbnail_url = info.thumbnail_url;
+          } else {
+            title = `YouTube Video (${videoId})`;
+          }
+        });
+
+        urls.push({ url, title, thumbnail_url });
         chrome.storage.local.set({ youtubeUrls: urls }, function () {
           chrome.notifications.create({
             type: "basic",
