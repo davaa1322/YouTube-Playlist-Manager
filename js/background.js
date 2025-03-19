@@ -29,7 +29,6 @@ chrome.contextMenus.onClicked.addListener(function (info, tab) {
             title = `YouTube Video (${videoId})`;
           }
         });
-
         urls.push({ url, title, thumbnail_url });
         chrome.storage.local.set({ youtubeUrls: urls }, function () {
           chrome.notifications.create({

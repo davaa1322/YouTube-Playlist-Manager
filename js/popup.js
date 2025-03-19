@@ -64,7 +64,7 @@ document.addEventListener("DOMContentLoaded", function () {
       const videoId = new URL(url).searchParams.get("v");
       let title = "";
       let thumbnail_url = "";
-      getYouTubeInfo(youtubeUrl).then((info) => {
+      getYouTubeInfo(url).then((info) => {
         if (info) {
           title = info.title;
           thumbnail_url = info.thumbnail_url;
@@ -172,6 +172,12 @@ document.addEventListener("DOMContentLoaded", function () {
         urlItem.addEventListener("dragover", (e) => e.preventDefault());
         urlItem.addEventListener("drop", (e) => handleDrop(e, index, urls));
 
+        const urlThumbnail = document.createElement("img");
+        urlThumbnail.src = item.thumbnail_url;
+        urlThumbnail.alt = item.title;
+        urlThumbnail.width = 50;
+        urlThumbnail.height = 50;
+
         const urlTitle = document.createElement("div");
         urlTitle.className = "url-title";
         urlTitle.textContent = item.title;
@@ -184,6 +190,7 @@ document.addEventListener("DOMContentLoaded", function () {
           removeUrl(index, urls)
         );
 
+        urlItem.appendChild(urlThumbnail);
         urlItem.appendChild(urlTitle);
         urlItem.appendChild(playButton);
         urlItem.appendChild(removeButton);
