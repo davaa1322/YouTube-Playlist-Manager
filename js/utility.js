@@ -1,4 +1,4 @@
-function getYouTubeInfo(videoUrl) {
+export function getYouTubeInfo(videoUrl) {
   const apiUrl = `https://www.youtube.com/oembed?url=${videoUrl}&format=json`;
 
   return fetch(apiUrl)

@@ -1,3 +1,5 @@
+import { getYouTubeInfo } from "./utility.js";
+
 chrome.runtime.onInstalled.addListener(function () {
   chrome.contextMenus.create({
     id: "addToPlaylist",
@@ -7,21 +9,21 @@ chrome.runtime.onInstalled.addListener(function () {
   });
 });
 
-chrome.contextMenus.onClicked.addListener(function (info, tab) {
+chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   if (info.menuItemId === "addToPlaylist") {
     const url = info.linkUrl;
     const videoId = new URL(url).searchParams.get("v");
     let title = `YouTube Video (${videoId})`;
     let thumbnail_url = "";
 
-    chrome.storage.local.get("youtubeUrls", function (data) {
+    chrome.storage.local.get("youtubeUrls", async (data) => {
       const urls = data.youtubeUrls || [];
 
       // Check duplicate
       const isDuplicate = urls.some((item) => item.url === url);
 
       if (!isDuplicate) {
-        getYouTubeInfo(url).then((info) => {
+        await getYouTubeInfo(url).then((info) => {
           if (info) {
             title = info.title;
             thumbnail_url = info.thumbnail_url;
@@ -30,13 +32,25 @@ chrome.contextMenus.onClicked.addListener(function (info, tab) {
           }
         });
         urls.push({ url, title, thumbnail_url });
-        chrome.storage.local.set({ youtubeUrls: urls }, function () {
-          chrome.notifications.create({
-            type: "basic",
-            iconUrl: "images/icon48.png",
-            title: "YouTube Playlist Manager",
-            message: "URL added to the playlist.",
-          });
+        chrome.storage.local.set({ youtubeUrls: urls }, () => {
+          chrome.notifications.create(
+            {
+              type: "basic",
+              iconUrl: "images/icon48.png",
+              title: "YouTube Playlist Manager",
+              message: "URL added to the playlist.",
+            },
+            () => {
+              if (chrome.runtime.lastError) {
+                console.error(
+                  "Context menu creation failed:",
+                  chrome.runtime.lastError
+                );
+              } else {
+                console.log("Context menu created successfully");
+              }
+            }
+          );
         });
       } else {
         chrome.notifications.create({
