@@ -67,18 +67,21 @@ function handleVideoEnd() {
         const currentVideo = urls[currentIndex];
         playedUrls.push(currentVideo);
         if (playedUrls.length > 100) playedUrls.shift();
-        const nextIndex = currentIndex + 1;
-        if (nextIndex < urls.length) {
-          urls.splice(currentIndex, 1); // Remove the current URL from the playlist
+        urls.splice(currentIndex, 1);
+        if (currentIndex < urls.length) {
           chrome.storage.local.set(
-            { youtubeUrls: urls, playedUrls: playedUrls },
+            {
+              youtubeUrls: urls,
+              playedUrls: playedUrls,
+              currentPlayIndex: currentIndex,
+            },
             function () {
-              attemptNavigation(nextIndex, playedUrls, urls);
+              attemptNavigation(currentIndex, playedUrls, urls);
             }
           );
         } else {
           chrome.storage.local.set(
-            { youtubeUrls: urls, playedUrls: playedUrls },
+            { youtubeUrls: urls, playedUrls: playedUrls, currentPlayIndex: 0 },
             function () {
               checkAndPlayNextVideo();
             }
