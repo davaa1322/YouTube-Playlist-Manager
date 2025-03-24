@@ -111,7 +111,6 @@ document.addEventListener("DOMContentLoaded", function () {
           });
           chrome.storage.local.set({ currentPlayIndex: 0 });
           addPlayedUrl(urls[0].url, urls[0].title);
-          urls.shift();
           chrome.storage.local.set({ youtubeUrls: urls }, loadUrls);
         } else {
           alert("There are no URLs to play.");
