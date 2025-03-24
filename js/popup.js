@@ -12,7 +12,6 @@ document.addEventListener("DOMContentLoaded", function () {
   const togglePlayedUrlsButton = document.getElementById("toggle-played-urls");
   const clearPlaylistButton = document.getElementById("clear-playlist");
   const clearPlayedUrlsButton = document.getElementById("clear-played-urls");
-  const currentVideoElement = document.getElementById("current-video");
 
   initializeSettings();
   loadUrls();
@@ -40,7 +39,6 @@ document.addEventListener("DOMContentLoaded", function () {
           volume.value = data.volume;
           volumeValue.textContent = data.volume + "%";
         }
-        currentVideoElement.textContent = data.nowPlaying || "No video playing";
       }
     );
   }
