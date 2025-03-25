@@ -28,19 +28,16 @@ document.addEventListener("DOMContentLoaded", function () {
   volume.addEventListener("input", updateVolume);
 
   function initializeSettings() {
-    chrome.storage.local.get(
-      ["playbackSpeed", "volume", "nowPlaying"],
-      function (data) {
-        if (data.playbackSpeed) {
-          playbackSpeed.value = data.playbackSpeed;
-          speedValue.textContent = data.playbackSpeed.toFixed(2) + "x";
-        }
-        if (data.volume) {
-          volume.value = data.volume;
-          volumeValue.textContent = data.volume + "%";
-        }
+    chrome.storage.local.get(["playbackSpeed", "volume"], function (data) {
+      if (data.playbackSpeed) {
+        playbackSpeed.value = data.playbackSpeed;
+        speedValue.textContent = data.playbackSpeed.toFixed(2) + "x";
       }
-    );
+      if (data.volume) {
+        volume.value = data.volume;
+        volumeValue.textContent = data.volume + "%";
+      }
+    });
   }
 
   function addCurrentUrl() {

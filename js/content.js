@@ -5,6 +5,7 @@ let isSettingApplied = false;
 let retryCount = 0;
 const MAX_RETRY = 10;
 let isAutoplayChecked = false;
+let videoEndedCalled = false;
 
 function initializeExtension() {
   if (!window.location.href.includes("youtube.com/watch")) return;
@@ -57,6 +58,9 @@ function checkVideoNearEnd() {
 }
 
 function handleVideoEnd() {
+  if (videoEndedCalled) return;
+  videoEndedCalled = true;
+
   chrome.storage.local.get(
     ["youtubeUrls", "currentPlayIndex", "playedUrls"],
     function (data) {
@@ -203,6 +207,7 @@ function resetAndReinitialize() {
   videoElement = null;
   isSettingApplied = false;
   retryCount = 0;
+  videoEndedCalled = false;
   setTimeout(initializeExtension, 2000);
 }
 
