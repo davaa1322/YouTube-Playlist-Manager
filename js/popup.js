@@ -40,38 +40,72 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 
-  function addCurrentUrl() {
-    chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
-      const currentUrl = tabs[0].url;
-      const currentTitle = tabs[0].title;
-      if (currentUrl.includes("youtube.com/watch")) {
-        addUrlToList(currentUrl, currentTitle, "");
-      } else {
-        alert("This Page is not Youtube.");
+  async function addCurrentUrl() {
+    chrome.tabs.query(
+      { active: true, currentWindow: true },
+      async function (tabs) {
+        const currentUrl = tabs[0].url;
+        const videoId = new URL(currentUrl).searchParams.get("v");
+        let title = `YouTube Video (${videoId})`;
+        let thumbnail_url = "";
+        if (!currentUrl.includes("youtube.com/watch")) {
+          alert("This Page is not Youtube.");
+        }
+        chrome.storage.local.get("youtubeUrls", async (data) => {
+          const urls = data.youtubeUrls || [];
+
+          const isDuplicate = urls.some((item) => item.url === currentUrl);
+
+          if (!isDuplicate) {
+            await getYouTubeInfo(currentUrl).then((info) => {
+              if (info) {
+                title = info.title;
+                thumbnail_url = info.thumbnail_url;
+              } else {
+                title = `YouTube Video (${videoId})`;
+              }
+            });
+            urls.push({ currentUrl, title, thumbnail_url });
+            chrome.storage.local.set({ youtubeUrls: urls }, () => {
+              console.log("URL added to the playlist.");
+            });
+          } else {
+            console.log("This URL already exists in the playlist.");
+          }
+        });
       }
-    });
+    );
   }
 
-  function addUrl() {
+  async function addUrl() {
     const url = urlInput.value.trim();
 
-    if (url && url.includes("youtube.com/watch")) {
-      const videoId = new URL(url).searchParams.get("v");
-      let title = "";
-      let thumbnail_url = "";
-      getYouTubeInfo(url).then((info) => {
-        if (info) {
-          title = info.title;
-          thumbnail_url = info.thumbnail_url;
-        } else {
-          title = `YouTube Video (${videoId})`;
-        }
-      });
-      addUrlToList(url, title, thumbnail_url);
-      urlInput.value = "";
-    } else {
+    if (!url && !url.includes("youtube.com/watch")) {
       alert("Please enter a valid YouTube video URL.");
     }
+    chrome.storage.local.get("youtubeUrls", async (data) => {
+      const urls = data.youtubeUrls || [];
+      const isDuplicate = urls.some((item) => item.url === url);
+      if (!isDuplicate) {
+        const videoId = new URL(url).searchParams.get("v");
+        let title = `YouTube Video (${videoId})`;
+        let thumbnail_url = "";
+        await getYouTubeInfo(url).then((info) => {
+          if (info) {
+            title = info.title;
+            thumbnail_url = info.thumbnail_url;
+          } else {
+            title = `YouTube Video (${videoId})`;
+          }
+        });
+        urls.push({ url, title, thumbnail_url });
+        chrome.storage.local.set({ youtubeUrls: urls }, () => {
+          console.log("URL added to the playlist.");
+        });
+      } else {
+        console.log("This URL already exists in the playlist.");
+      }
+    });
   }
 
   function getYouTubeInfo(videoUrl) {
